@@ -5,8 +5,6 @@ import java.net.Socket;
 
 import javax.swing.*;
 
-import static javax.swing.ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS;
-
 public class CustomerClient extends JFrame {
     private JLabel nameLabel = new JLabel("Name:");
     private JLabel AddressLabel = new JLabel("Address:");
