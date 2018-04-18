@@ -89,6 +89,7 @@ public class CustomerClient extends JFrame implements ActionListener {
         subPanel2.add(updateButton);
 
         connectButton.addActionListener(this);
+        getAllButton.addActionListener(this);
 
         subPanel3.add(statusLabel);
 
@@ -111,8 +112,10 @@ public class CustomerClient extends JFrame implements ActionListener {
         /*
         } else if (e.getActionCommand().equals("Disconnect")) {
             disconnect();
+        */
         } else if (e.getSource() == getAllButton) {
             handleGetAll();
+        /*
         } else if (e.getSource() == addButton) {
             handleAdd();
         } else if (e.getSource() == updateButton) {
@@ -137,13 +140,6 @@ public class CustomerClient extends JFrame implements ActionListener {
 
             System.out.println("LOG: Streams opened");
 
-            try {
-                out.writeBytes("Hello server.");
-            } catch (IOException e) {
-                System.out.println("Write to client error.");
-
-            }
-
             connectButton.setText("Disconnect");
 
             // Enable buttons
@@ -167,10 +163,18 @@ public class CustomerClient extends JFrame implements ActionListener {
             System.err.println("Exception closing socket: " + e);
         }
     }
-
+*/
     private void handleGetAll() {
-    }
+        try {
+            out.write(5);
+            out.flush();
 
+            System.out.println(in.readInt());
+        } catch (IOException e) {
+            System.out.println("Write to client error.");
+        }
+    }
+/*
     private void handleAdd() {
     }
 

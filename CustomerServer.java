@@ -1,6 +1,4 @@
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
+import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.sql.Connection;
@@ -67,6 +65,9 @@ class Conversation extends Thread {
     private Socket clientSocket;
     private ObjectInputStream in;
     private ObjectOutputStream out;
+    BufferedOutputStream outStream;
+
+    private int num;
 
     // Where JavaCustXX is your database name
     //private static final String URL = "jdbc:mysql://courses:3306/JavaCustXX";     ************************************
@@ -89,7 +90,10 @@ class Conversation extends Thread {
 
         try {
             out = new ObjectOutputStream(clientSocket.getOutputStream());
+            //outStream = new BufferedOutputStream(out);
+
             in = new ObjectInputStream(clientSocket.getInputStream());
+
             System.out.println("LOG: Streams opened");
         } catch (IOException e) {
             try {
@@ -104,7 +108,6 @@ class Conversation extends Thread {
 
         try {
             System.out.println("LOG: Trying to create database connection");
-            //Connection connection = DriverManager.getConnection(URL, "user", "user");
             Connection connection = DriverManager.getConnection(URL, name, password);
 
             // Create your Statements and PreparedStatements here
@@ -122,18 +125,30 @@ class Conversation extends Thread {
         this.start();
     }
 
-    /*
+    /**
      * run()
      *
      * Reads and processes input from the client until the client disconnects.
      */
-    /*
-    public void run() {
-        System.out.println("LOG: Thread running");
 
+    public void run() {
+        // ADD SELECT STRUCTURE FOR REQUEST TYPE IN RUN().
+        System.out.println("LOG: Thread running");
+        try {
+            num = in.read();
+            System.out.println(num);
+
+            out.writeInt(num * 2);
+        } catch (Exception e) {
+            System.out.println("Error writing message to client.");
+        }
+
+        handleGetAll();
+        /*
         try {
             while (true) {
                 // Read and process input from the client.
+                handleGetAll();
             }
         } catch (IOException e) {
             System.err.println("IOException: " + e);
@@ -145,11 +160,13 @@ class Conversation extends Thread {
                 System.err.println("Exception closing client socket: " + e);
             }
         }
+        */
     }
 
     private void handleGetAll() {
-    }
 
+    }
+/*
     private void handleAdd(MessageObject clientMsg) {
     }
 
