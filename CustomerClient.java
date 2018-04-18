@@ -1,11 +1,15 @@
 import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
+import java.net.UnknownHostException;
 
 import javax.swing.*;
 
-public class CustomerClient extends JFrame {
+public class CustomerClient extends JFrame implements ActionListener {
     private JLabel nameLabel = new JLabel("Name:");
     private JLabel AddressLabel = new JLabel("Address:");
     private JLabel ssnLabel = new JLabel("SSN:");
@@ -84,6 +88,8 @@ public class CustomerClient extends JFrame {
         subPanel2.add(deleteButton);
         subPanel2.add(updateButton);
 
+        connectButton.addActionListener(this);
+
         subPanel3.add(statusLabel);
 
         //add(BorderLayout.CENTER, topPanel);
@@ -97,11 +103,12 @@ public class CustomerClient extends JFrame {
 
         setVisible(true);
     }
-/*
+
     @Override
     public void actionPerformed(ActionEvent e) {
         if (e.getActionCommand().equals("Connect")) {
             connect();
+        /*
         } else if (e.getActionCommand().equals("Disconnect")) {
             disconnect();
         } else if (e.getSource() == getAllButton) {
@@ -113,12 +120,15 @@ public class CustomerClient extends JFrame {
         } else if (e.getSource() == deleteButton) {
             handleDelete();
         }
+        */
+        }
     }
 
     private void connect() {
         try {
             // Replace 97xx with your port number
-            socket = new Socket("turing.cs.niu.edu", 97xx);
+            //socket = new Socket("turing.cs.niu.edu", 9732);
+            socket = new Socket("localhost", 9734);
 
             System.out.println("LOG: Socket opened");
 
@@ -126,6 +136,13 @@ public class CustomerClient extends JFrame {
             in = new ObjectInputStream(socket.getInputStream());
 
             System.out.println("LOG: Streams opened");
+
+            try {
+                out.writeBytes("Hello server.");
+            } catch (IOException e) {
+                System.out.println("Write to client error.");
+
+            }
 
             connectButton.setText("Disconnect");
 
@@ -138,6 +155,7 @@ public class CustomerClient extends JFrame {
         }
     }
 
+/*
     private void disconnect() {
         connectButton.setText("Connect");
 
