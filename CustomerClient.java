@@ -1,9 +1,7 @@
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
+import java.io.*;
 import java.net.Socket;
 import java.net.UnknownHostException;
 
@@ -164,15 +162,28 @@ public class CustomerClient extends JFrame implements ActionListener {
         }
     }
 */
+
     private void handleGetAll() {
         try {
-            out.write(5);
-            out.flush();
+            out.writeObject("getAll");
+            System.out.println(in.readObject().toString());
+        } catch(IOException | ClassNotFoundException e) {
+            System.out.println("Couldn't read from server");
+        }
 
-            System.out.println(in.readInt());
+        /*
+        try {
+            //out.write(5);
+            //out.flush();
+
+            Object buffRead = in;
+
+            System.out.println(buffRead.toString());
         } catch (IOException e) {
             System.out.println("Write to client error.");
+            System.out.println(e.getMessage());
         }
+        */
     }
 /*
     private void handleAdd() {

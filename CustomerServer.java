@@ -7,6 +7,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.Date;
 
 public class CustomerServer extends Thread {
     private ServerSocket listenSocket;
@@ -67,8 +68,6 @@ class Conversation extends Thread {
     private ObjectOutputStream out;
     BufferedOutputStream outStream;
 
-    private int num;
-
     // Where JavaCustXX is your database name
     //private static final String URL = "jdbc:mysql://courses:3306/JavaCustXX";     ************************************
     private static final String URL = "jdbc:mysql://localhost:3306/falcon9";
@@ -79,6 +78,8 @@ class Conversation extends Thread {
     private PreparedStatement addStatement = null;
     private PreparedStatement deleteStatement = null;
     private PreparedStatement updateStatement = null;
+
+    Connection connection;
 
     /**
      * Constructor
@@ -108,7 +109,7 @@ class Conversation extends Thread {
 
         try {
             System.out.println("LOG: Trying to create database connection");
-            Connection connection = DriverManager.getConnection(URL, name, password);
+            connection = DriverManager.getConnection(URL, name, password);
 
             // Create your Statements and PreparedStatements here
 
@@ -130,27 +131,22 @@ class Conversation extends Thread {
      *
      * Reads and processes input from the client until the client disconnects.
      */
-
     public void run() {
-        // ADD SELECT STRUCTURE FOR REQUEST TYPE IN RUN().
+        // ADD SELECT STRUCTURE FOR REQUEST TYPE HERE.
         System.out.println("LOG: Thread running");
-        try {
-            num = in.read();
-            System.out.println(num);
 
-            out.writeInt(num * 2);
-        } catch (Exception e) {
-            System.out.println("Error writing message to client.");
-        }
-
-        handleGetAll();
-        /*
         try {
-            while (true) {
-                // Read and process input from the client.
-                handleGetAll();
+            while(true) {
+                // Read and process input from the client. (HANDLE REQUESTS)
+                String request = in.readObject().toString();
+
+                switch (request) {
+                    case "getAll":
+                        handleGetAll();
+                        break;
+                }
             }
-        } catch (IOException e) {
+        } catch (IOException | ClassNotFoundException e) {
             System.err.println("IOException: " + e);
             System.out.println("LOG: Client disconnected");
         } finally {
@@ -160,11 +156,16 @@ class Conversation extends Thread {
                 System.err.println("Exception closing client socket: " + e);
             }
         }
-        */
     }
 
     private void handleGetAll() {
+        try {
+            out.writeObject("Request type: Get All");
 
+            Statement sql = connection.createStatement();
+        } catch(Exception e) {
+            System.out.println("Error in creating sql statement.");
+        }
     }
 /*
     private void handleAdd(MessageObject clientMsg) {
