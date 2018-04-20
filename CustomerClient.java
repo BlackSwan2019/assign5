@@ -4,6 +4,7 @@ import java.awt.event.ActionListener;
 import java.io.*;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
 
 import javax.swing.*;
 
@@ -13,6 +14,8 @@ public class CustomerClient extends JFrame implements ActionListener {
     private JLabel ssnLabel = new JLabel("SSN:");
     private JLabel zipLabel = new JLabel("Zip Code:");
     private JLabel statusLabel = new JLabel("Client started");
+    private JLabel errors = new JLabel();
+
 
     private JTextField nameField = new JTextField();
     private JTextField addressField = new JTextField();
@@ -32,13 +35,16 @@ public class CustomerClient extends JFrame implements ActionListener {
     private JPanel subPanel2 = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 5));
     private JPanel subPanel3 = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
 
-
     private JTextArea outputArea = new JTextArea();
     private JScrollPane scrollArea = new JScrollPane();
 
     private Socket socket;
     private ObjectInputStream in;
     private ObjectOutputStream out;
+
+    private ArrayList<String> message = new ArrayList<>();
+
+    private ArrayList<String> warnings = new ArrayList<>();
 
     private static final long serialVersionUID = 1L;
 
@@ -73,10 +79,10 @@ public class CustomerClient extends JFrame implements ActionListener {
 
         subPanel1.add(nameLabel);
         subPanel1.add(nameField);
-        subPanel1.add(AddressLabel);
-        subPanel1.add(addressField);
         subPanel1.add(ssnLabel);
         subPanel1.add(ssnField);
+        subPanel1.add(AddressLabel);
+        subPanel1.add(addressField);
         subPanel1.add(zipLabel);
         subPanel1.add(zipField);
 
@@ -86,10 +92,18 @@ public class CustomerClient extends JFrame implements ActionListener {
         subPanel2.add(deleteButton);
         subPanel2.add(updateButton);
 
+        getAllButton.setEnabled(false);
+        addButton.setEnabled(false);
+        deleteButton.setEnabled(false);
+        updateButton.setEnabled(false);
+
         connectButton.addActionListener(this);
         getAllButton.addActionListener(this);
+        addButton.addActionListener(this);
+        updateButton.addActionListener(this);
 
         subPanel3.add(statusLabel);
+        subPanel3.add(errors);
 
         //add(BorderLayout.CENTER, topPanel);
         scrollArea = new JScrollPane(outputArea);
@@ -107,17 +121,19 @@ public class CustomerClient extends JFrame implements ActionListener {
     public void actionPerformed(ActionEvent e) {
         if (e.getActionCommand().equals("Connect")) {
             connect();
-        /*
+
         } else if (e.getActionCommand().equals("Disconnect")) {
             disconnect();
-        */
+
         } else if (e.getSource() == getAllButton) {
             handleGetAll();
-        /*
+
         } else if (e.getSource() == addButton) {
             handleAdd();
+
         } else if (e.getSource() == updateButton) {
             handleUpdate();
+            /*
         } else if (e.getSource() == deleteButton) {
             handleDelete();
         }
@@ -129,10 +145,11 @@ public class CustomerClient extends JFrame implements ActionListener {
         try {
             // Replace 97xx with your port number
             //socket = new Socket("turing.cs.niu.edu", 9732);
-            socket = new Socket("localhost", 9734);
+            socket = new Socket("localhost", 9732);
 
             System.out.println("LOG: Socket opened");
 
+            // Create in/out object streams.
             out = new ObjectOutputStream(socket.getOutputStream());
             in = new ObjectInputStream(socket.getInputStream());
 
@@ -140,7 +157,14 @@ public class CustomerClient extends JFrame implements ActionListener {
 
             connectButton.setText("Disconnect");
 
+            // Update status label.
+            statusLabel.setText("Connected");
+
             // Enable buttons
+            getAllButton.setEnabled(true);
+            addButton.setEnabled(true);
+            deleteButton.setEnabled(true);
+            updateButton.setEnabled(true);
 
         } catch (UnknownHostException e) {
             System.err.println("Exception resolving host name: " + e);
@@ -149,11 +173,16 @@ public class CustomerClient extends JFrame implements ActionListener {
         }
     }
 
-/*
     private void disconnect() {
         connectButton.setText("Connect");
 
         // Disable buttons
+        getAllButton.setEnabled(false);
+        addButton.setEnabled(false);
+        deleteButton.setEnabled(false);
+        updateButton.setEnabled(false);
+
+        statusLabel.setText("Disconnected");
 
         try {
             socket.close();
@@ -161,38 +190,191 @@ public class CustomerClient extends JFrame implements ActionListener {
             System.err.println("Exception closing socket: " + e);
         }
     }
-*/
 
     private void handleGetAll() {
         try {
-            out.writeObject("getAll");
-            System.out.println(in.readObject().toString());
+            message = new ArrayList<>();
+
+            message.add("GETALL");
+
+            out.writeObject(message);
+
+            message = (ArrayList) in.readObject();
+
+            String queryStatus = message.get(message.size() - 1);
+
+            statusLabel.setText(queryStatus);
+
+            message.remove(0);
+            message.remove(message.size() - 1);
+
+            int i = 0;
+
+            for (String s : message)
+                if (i < 3) {
+                    outputArea.append(s + "; ");
+                    i++;
+                }
+                else {
+                    outputArea.append(s + "; \n");
+                    i = 0;
+                }
         } catch(IOException | ClassNotFoundException e) {
             System.out.println("Couldn't read from server");
         }
+    }
 
-        /*
+    private void handleAdd() {
         try {
-            //out.write(5);
-            //out.flush();
+            String addSSN;
+            String addName;
+            String addAddress;
+            String addZip;
 
-            Object buffRead = in;
+            // Re-instantiate client-server message.
+            message = new ArrayList<>();
 
-            System.out.println(buffRead.toString());
-        } catch (IOException e) {
-            System.out.println("Write to client error.");
-            System.out.println(e.getMessage());
+            // Add request type to beginning of message.
+            message.add("ADD");
+
+            // Make sure all four fields have valid data.
+            boolean validFields = fieldChecker();
+
+            // If there are any incorrectly-filled fields, give warnings and do NOT add customer to database.
+            if (validFields) {
+                StringBuilder warning = new StringBuilder();
+
+                for (String s : warnings) {
+                    warning.append(s);
+                    warning.append(" ");
+                }
+
+                String warningString = warning.toString();
+
+                statusLabel.setText(warningString);
+
+                statusLabel.setForeground(Color.RED);
+
+                this.setVisible(true);
+            }
+            // Else, add all the field values to the message and send it to server for processing.
+            else {
+                addName  = nameField.getText();
+                addSSN = ssnField.getText();
+                addAddress = addressField.getText();
+                addZip = zipField.getText();
+
+                message.add(addName);
+                message.add(addSSN);
+                message.add(addAddress);
+                message.add(addZip);
+
+                out.writeObject(message);
+
+                message = (ArrayList) in.readObject();
+
+                String queryStatus = message.get(message.size() - 1);
+
+                // If SSN already is in the database, MySQL will naturally reject it. Give warning.
+                if ((message.get(message.size() - 1).equalsIgnoreCase("SSN already exists."))) {
+                    statusLabel.setText(queryStatus);
+                    statusLabel.setForeground(Color.RED);
+                }
+                // Else, SSN is new, so insert the new customer.
+                else {
+                    statusLabel.setText(queryStatus);
+                    statusLabel.setForeground(Color.BLACK);
+                }
+            }
+        } catch(Exception e) {
+            System.out.println("Could not add customer to database: " + e.getMessage());
         }
-        */
     }
 /*
-    private void handleAdd() {
-    }
-
     private void handleDelete() {
     }
-
+*/
     private void handleUpdate() {
+        try {
+            // Re-instantiate client-server message.
+            message = new ArrayList<>();
+
+            boolean validField = fieldChecker();
+
+            message.add("UPDATE");
+
+            if (validField) {
+
+
+            } else {
+                message.add(nameField.getText());
+                message.add(ssnField.getText());
+                message.add(addressField.getText());
+                message.add(zipField.getText());
+
+                out.writeObject(message);
+
+                statusLabel.setText("Update message sent to server.");
+
+            }
+        } catch (IOException e) {
+            System.out.println("IOException: " + e.getMessage());
+        }
     }
-    */
+
+    private boolean fieldChecker() {
+        boolean warningFlag = false;
+
+        warnings = new ArrayList<>();
+
+        java.util.regex.Pattern namePattern = java.util.regex.Pattern.compile("^(?!\\s)[a-zA-Z\\s]{1,20}$");
+        java.util.regex.Matcher nameMatcher = namePattern.matcher(nameField.getText());
+
+        if (nameField.getText().equalsIgnoreCase("")) {
+            warnings.add("No name entered.");
+            warningFlag = true;
+        }
+        else if (!nameMatcher.matches()){
+            warnings.add("Improper name entered.");
+            warningFlag = true;
+        }
+
+        java.util.regex.Pattern ssnPattern = java.util.regex.Pattern.compile("^(?!000|666|\\s)[0-8][0-9]{2}-(?!00)[0-9]{2}-(?!0000)[0-9]{4}$");
+        java.util.regex.Matcher ssnMatcher = ssnPattern.matcher(ssnField.getText());
+
+        if (ssnField.getText().equalsIgnoreCase("")) {
+            warnings.add("No SSN number entered.");
+            warningFlag = true;
+        }
+        else if (!ssnMatcher.matches()){
+            warnings.add("Incorrectly formatted SSN.");
+            warningFlag = true;
+        }
+
+        java.util.regex.Pattern addressPattern = java.util.regex.Pattern.compile("^(?!\\s)[\\w\\s. ]{1,40}$");
+        java.util.regex.Matcher addressMatcher = addressPattern.matcher(addressField.getText());
+
+        if (addressField.getText().equalsIgnoreCase("")) {
+            warnings.add("No address entered.");
+            warningFlag = true;
+        }
+        else if (!addressMatcher.matches()) {
+            warnings.add("Improper address entered.");
+            warningFlag = true;
+        }
+
+        java.util.regex.Pattern zipPattern = java.util.regex.Pattern.compile("^(?!\\s)[0-9]{5}$");
+        java.util.regex.Matcher zipMatcher = zipPattern.matcher(zipField.getText());
+
+        if (zipField.getText().equalsIgnoreCase("")) {
+            warnings.add("No zip code entered.");
+            warningFlag = true;
+        }
+        else if (!zipMatcher.matches()) {
+            warnings.add("Improper zip code entered.");
+            warningFlag = true;
+        }
+
+        return warningFlag;
+    }
 }

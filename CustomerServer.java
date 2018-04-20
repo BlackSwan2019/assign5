@@ -7,6 +7,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.ArrayList;
 import java.util.Date;
 
 public class CustomerServer extends Thread {
@@ -17,8 +18,8 @@ public class CustomerServer extends Thread {
     }
 
     private CustomerServer() {
-        // Listening port.nW
-        int port = 9734;
+        // Listening port
+        int port = 9732;
         try {
             listenSocket = new ServerSocket(port);
         } catch (IOException e) {
@@ -79,7 +80,11 @@ class Conversation extends Thread {
     private PreparedStatement deleteStatement = null;
     private PreparedStatement updateStatement = null;
 
-    Connection connection;
+    private ResultSet resultSet = null;
+
+    private Connection connection;
+
+    private ArrayList<String> message = new ArrayList<>();
 
     /**
      * Constructor
@@ -91,8 +96,6 @@ class Conversation extends Thread {
 
         try {
             out = new ObjectOutputStream(clientSocket.getOutputStream());
-            //outStream = new BufferedOutputStream(out);
-
             in = new ObjectInputStream(clientSocket.getInputStream());
 
             System.out.println("LOG: Streams opened");
@@ -131,18 +134,24 @@ class Conversation extends Thread {
      *
      * Reads and processes input from the client until the client disconnects.
      */
+    @Override
     public void run() {
-        // ADD SELECT STRUCTURE FOR REQUEST TYPE HERE.
         System.out.println("LOG: Thread running");
 
         try {
             while(true) {
                 // Read and process input from the client. (HANDLE REQUESTS)
-                String request = in.readObject().toString();
+                message = (ArrayList) in.readObject();
 
-                switch (request) {
-                    case "getAll":
+                System.out.println(message.get(0));
+
+                switch (message.get(0)) {
+                    case "GETALL":
                         handleGetAll();
+                        break;
+                    case "ADD":
+                        message.remove(0);
+                        handleAdd(message);
                         break;
                 }
             }
@@ -160,17 +169,51 @@ class Conversation extends Thread {
 
     private void handleGetAll() {
         try {
-            out.writeObject("Request type: Get All");
+            getAllStatement = connection.createStatement();
 
-            Statement sql = connection.createStatement();
+            resultSet = getAllStatement.executeQuery("SELECT * FROM customer");
+
+            while (resultSet.next()) {
+                message.add(resultSet.getString("name"));
+                message.add(resultSet.getString("ssn"));
+                message.add(resultSet.getString("address"));
+                message.add(resultSet.getString("zipCode"));
+            }
+
+            message.add("Query successful\n");
+
+            out.writeObject(message);
         } catch(Exception e) {
             System.out.println("Error in creating sql statement.");
+            System.out.println(e.getMessage());
+        }
+    }
+
+    private void handleAdd(ArrayList<String> clientMsg) {
+        try {
+            addStatement = connection.prepareStatement("insert into customer values (?, ?, ?, ?)");
+
+            addStatement.setString(1, clientMsg.get(0));
+            addStatement.setString(2, clientMsg.get(1));
+            addStatement.setString(3, clientMsg.get(2));
+            addStatement.setString(4, clientMsg.get(3));
+
+            try {
+                addStatement.executeUpdate();
+            } catch (SQLException e) {
+                message.add("SSN already exists.");
+                out.writeObject(message);
+                return;
+            }
+
+            message.add("Customer added");
+
+            out.writeObject(message);
+        } catch (SQLException | IOException e) {
+            System.out.println("Error in adding to database: " + e.getMessage());
         }
     }
 /*
-    private void handleAdd(MessageObject clientMsg) {
-    }
-
     private void handleDelete(MessageObject clientMsg) {
     }
 
