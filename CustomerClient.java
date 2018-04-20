@@ -16,7 +16,6 @@ public class CustomerClient extends JFrame implements ActionListener {
     private JLabel statusLabel = new JLabel("Client started");
     private JLabel errors = new JLabel();
 
-
     private JTextField nameField = new JTextField();
     private JTextField addressField = new JTextField();
     private JTextField ssnField = new JTextField();
@@ -101,6 +100,7 @@ public class CustomerClient extends JFrame implements ActionListener {
         getAllButton.addActionListener(this);
         addButton.addActionListener(this);
         updateButton.addActionListener(this);
+        deleteButton.addActionListener(this);
 
         subPanel3.add(statusLabel);
         subPanel3.add(errors);
@@ -109,10 +109,6 @@ public class CustomerClient extends JFrame implements ActionListener {
         scrollArea = new JScrollPane(outputArea);
         scrollArea.setPreferredSize(new Dimension(this.getWidth(), this.getHeight() / 2));
         add(BorderLayout.PAGE_END, scrollArea);
-
-
-
-        //outputArea.setBackground(new Color(255, 255, 255));
 
         setVisible(true);
     }
@@ -133,11 +129,9 @@ public class CustomerClient extends JFrame implements ActionListener {
 
         } else if (e.getSource() == updateButton) {
             handleUpdate();
-            /*
+
         } else if (e.getSource() == deleteButton) {
             handleDelete();
-        }
-        */
         }
     }
 
@@ -237,11 +231,60 @@ public class CustomerClient extends JFrame implements ActionListener {
             // Add request type to beginning of message.
             message.add("ADD");
 
-            // Make sure all four fields have valid data.
-            boolean validFields = fieldChecker();
+            warnings = new ArrayList<>();
+
+            boolean warningFlag = false;
+
+            java.util.regex.Pattern namePattern = java.util.regex.Pattern.compile("^(?!\\s)[a-zA-Z\\s]{1,20}$");
+            java.util.regex.Matcher nameMatcher = namePattern.matcher(nameField.getText());
+
+            if (nameField.getText().equalsIgnoreCase("")) {
+                warnings.add("No name entered.");
+                warningFlag = true;
+            }
+            else if (!nameMatcher.matches()){
+                warnings.add("Improper name entered.");
+                warningFlag = true;
+            }
+
+            java.util.regex.Pattern ssnPattern = java.util.regex.Pattern.compile("^(?!000|666|\\s)[0-8][0-9]{2}-(?!00)[0-9]{2}-(?!0000)[0-9]{4}$");
+            java.util.regex.Matcher ssnMatcher = ssnPattern.matcher(ssnField.getText());
+
+            if (ssnField.getText().equalsIgnoreCase("")) {
+                warnings.add("No SSN entered.");
+                warningFlag = true;
+            }
+            else if (!ssnMatcher.matches()){
+                warnings.add("Incorrectly formatted SSN.");
+                warningFlag = true;
+            }
+
+            java.util.regex.Pattern addressPattern = java.util.regex.Pattern.compile("^(?!\\s)[\\w\\s. ]{1,40}$");
+            java.util.regex.Matcher addressMatcher = addressPattern.matcher(addressField.getText());
+
+            if (addressField.getText().equalsIgnoreCase("")) {
+                warnings.add("No address entered.");
+                warningFlag = true;
+            }
+            else if (!addressMatcher.matches()) {
+                warnings.add("Improper address entered.");
+                warningFlag = true;
+            }
+
+            java.util.regex.Pattern zipPattern = java.util.regex.Pattern.compile("^(?!\\s)[0-9]{5}$");
+            java.util.regex.Matcher zipMatcher = zipPattern.matcher(zipField.getText());
+
+            if (zipField.getText().equalsIgnoreCase("")) {
+                warnings.add("No zip code entered.");
+                warningFlag = true;
+            }
+            else if (!zipMatcher.matches()) {
+                warnings.add("Improper zip code entered.");
+                warningFlag = true;
+            }
 
             // If there are any incorrectly-filled fields, give warnings and do NOT add customer to database.
-            if (validFields) {
+            if (warningFlag) {
                 StringBuilder warning = new StringBuilder();
 
                 for (String s : warnings) {
@@ -290,91 +333,147 @@ public class CustomerClient extends JFrame implements ActionListener {
             System.out.println("Could not add customer to database: " + e.getMessage());
         }
     }
-/*
+
     private void handleDelete() {
+        try {
+            // Re-instantiate client-server message.
+            message = new ArrayList<>();
+
+            // Add request type to beginning of message.
+            message.add("DELETE");
+
+            warnings = new ArrayList<>();
+
+            boolean warningFlag = false;
+
+            java.util.regex.Pattern ssnPattern = java.util.regex.Pattern.compile("^(?!000|666|\\s)[0-8][0-9]{2}-(?!00)[0-9]{2}-(?!0000)[0-9]{4}$");
+            java.util.regex.Matcher ssnMatcher = ssnPattern.matcher(ssnField.getText());
+
+            if (ssnField.getText().equalsIgnoreCase("")) {
+                warnings.add("No SSN entered.");
+                warningFlag = true;
+            }
+            else if (!ssnMatcher.matches()){
+                warnings.add("Incorrectly formatted SSN.");
+                warningFlag = true;
+            }
+
+            if (warningFlag) {
+                StringBuilder warning = new StringBuilder();
+
+                for (String s : warnings) {
+                    warning.append(s);
+                    warning.append(" ");
+                }
+
+                String warningString = warning.toString();
+
+                statusLabel.setText(warningString);
+
+                statusLabel.setForeground(Color.RED);
+
+                this.setVisible(true);
+            } else {
+                message.add(ssnField.getText());
+
+                out.writeObject(message);
+
+                message = (ArrayList) in.readObject();
+
+                String queryStatus = message.get(message.size() - 1);
+
+                // If SSN already is in the database, MySQL will naturally reject it. Give warning.
+                if ((message.get(message.size() - 1).equalsIgnoreCase("No customer with specified SSN. No customer deleted."))) {
+                    statusLabel.setText(queryStatus);
+                    statusLabel.setForeground(Color.RED);
+                }
+                // Else, SSN is new, so insert the new customer.
+                else {
+                    statusLabel.setText(queryStatus);
+                    statusLabel.setForeground(Color.BLACK);
+                }
+            }
+        } catch (IOException | ClassNotFoundException e) {
+            System.out.println("IOException: " + e.getMessage());
+        }
     }
-*/
+
     private void handleUpdate() {
         try {
             // Re-instantiate client-server message.
             message = new ArrayList<>();
 
-            boolean validField = fieldChecker();
-
+            // Add request type to beginning of message.
             message.add("UPDATE");
 
-            if (validField) {
+            warnings = new ArrayList<>();
 
+            boolean warningFlag = false;
 
+            java.util.regex.Pattern ssnPattern = java.util.regex.Pattern.compile("^(?!000|666|\\s)[0-8][0-9]{2}-(?!00)[0-9]{2}-(?!0000)[0-9]{4}$");
+            java.util.regex.Matcher ssnMatcher = ssnPattern.matcher(ssnField.getText());
+
+            if (ssnField.getText().equalsIgnoreCase("")) {
+                warnings.add("No SSN entered.");
+                warningFlag = true;
+            }
+            else if (!ssnMatcher.matches()){
+                warnings.add("Incorrectly formatted SSN.");
+                warningFlag = true;
+            }
+
+            java.util.regex.Pattern addressPattern = java.util.regex.Pattern.compile("^(?!\\s)[\\w\\s. ]{1,40}$");
+            java.util.regex.Matcher addressMatcher = addressPattern.matcher(addressField.getText());
+
+            if (addressField.getText().equalsIgnoreCase("")) {
+                warnings.add("No address entered.");
+                warningFlag = true;
+            }
+            else if (!addressMatcher.matches()) {
+                warnings.add("Improper address entered.");
+                warningFlag = true;
+            }
+
+            if (warningFlag) {
+                StringBuilder warning = new StringBuilder();
+
+                for (String s : warnings) {
+                    warning.append(s);
+                    warning.append(" ");
+                }
+
+                String warningString = warning.toString();
+
+                System.out.println(warning.length());
+
+                statusLabel.setText(warningString);
+
+                statusLabel.setForeground(Color.RED);
+
+                this.setVisible(true);
             } else {
-                message.add(nameField.getText());
                 message.add(ssnField.getText());
                 message.add(addressField.getText());
-                message.add(zipField.getText());
 
                 out.writeObject(message);
 
-                statusLabel.setText("Update message sent to server.");
+                message = (ArrayList) in.readObject();
 
+                String queryStatus = message.get(message.size() - 1);
+
+                // If SSN already is in the database, MySQL will naturally reject it. Give warning.
+                if ((message.get(message.size() - 1).equalsIgnoreCase("No such customer with specified SSN. No customer updated."))) {
+                    statusLabel.setText(queryStatus);
+                    statusLabel.setForeground(Color.RED);
+                }
+                // Else, SSN is new, so insert the new customer.
+                else {
+                    statusLabel.setText(queryStatus);
+                    statusLabel.setForeground(Color.BLACK);
+                }
             }
-        } catch (IOException e) {
+        } catch (IOException | ClassNotFoundException e) {
             System.out.println("IOException: " + e.getMessage());
         }
-    }
-
-    private boolean fieldChecker() {
-        boolean warningFlag = false;
-
-        warnings = new ArrayList<>();
-
-        java.util.regex.Pattern namePattern = java.util.regex.Pattern.compile("^(?!\\s)[a-zA-Z\\s]{1,20}$");
-        java.util.regex.Matcher nameMatcher = namePattern.matcher(nameField.getText());
-
-        if (nameField.getText().equalsIgnoreCase("")) {
-            warnings.add("No name entered.");
-            warningFlag = true;
-        }
-        else if (!nameMatcher.matches()){
-            warnings.add("Improper name entered.");
-            warningFlag = true;
-        }
-
-        java.util.regex.Pattern ssnPattern = java.util.regex.Pattern.compile("^(?!000|666|\\s)[0-8][0-9]{2}-(?!00)[0-9]{2}-(?!0000)[0-9]{4}$");
-        java.util.regex.Matcher ssnMatcher = ssnPattern.matcher(ssnField.getText());
-
-        if (ssnField.getText().equalsIgnoreCase("")) {
-            warnings.add("No SSN number entered.");
-            warningFlag = true;
-        }
-        else if (!ssnMatcher.matches()){
-            warnings.add("Incorrectly formatted SSN.");
-            warningFlag = true;
-        }
-
-        java.util.regex.Pattern addressPattern = java.util.regex.Pattern.compile("^(?!\\s)[\\w\\s. ]{1,40}$");
-        java.util.regex.Matcher addressMatcher = addressPattern.matcher(addressField.getText());
-
-        if (addressField.getText().equalsIgnoreCase("")) {
-            warnings.add("No address entered.");
-            warningFlag = true;
-        }
-        else if (!addressMatcher.matches()) {
-            warnings.add("Improper address entered.");
-            warningFlag = true;
-        }
-
-        java.util.regex.Pattern zipPattern = java.util.regex.Pattern.compile("^(?!\\s)[0-9]{5}$");
-        java.util.regex.Matcher zipMatcher = zipPattern.matcher(zipField.getText());
-
-        if (zipField.getText().equalsIgnoreCase("")) {
-            warnings.add("No zip code entered.");
-            warningFlag = true;
-        }
-        else if (!zipMatcher.matches()) {
-            warnings.add("Improper zip code entered.");
-            warningFlag = true;
-        }
-
-        return warningFlag;
     }
 }

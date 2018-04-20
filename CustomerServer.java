@@ -153,6 +153,14 @@ class Conversation extends Thread {
                         message.remove(0);
                         handleAdd(message);
                         break;
+                    case "UPDATE":
+                        message.remove(0);
+                        handleUpdate(message);
+                        break;
+                    case "DELETE":
+                        message.remove(0);
+                        handleDelete(message);
+                        break;
                 }
             }
         } catch (IOException | ClassNotFoundException e) {
@@ -213,11 +221,61 @@ class Conversation extends Thread {
             System.out.println("Error in adding to database: " + e.getMessage());
         }
     }
-/*
-    private void handleDelete(MessageObject clientMsg) {
+
+    private void handleDelete(ArrayList<String> clientMsg) {
+        try {
+            deleteStatement = connection.prepareStatement("delete from customer where ssn = ?");
+
+            deleteStatement.setString(1, clientMsg.get(0));
+
+            try {
+                if (deleteStatement.executeUpdate() == 0) {
+                    message.add("No customer with specified SSN. No customer deleted.");
+                    out.writeObject(message);
+                    return;
+                }
+
+            } catch (SQLException e) {
+                message.add("Could not delete customer.");
+                out.writeObject(message);
+                return;
+            }
+
+            message.add("Customer successfully deleted.");
+
+            out.writeObject(message);
+
+        } catch(SQLException | IOException e) {
+            System.out.println("Error at handleDelete()" + e.getMessage());
+        }
     }
 
-    private void handleUpdate(MessageObject clientMsg) {
+    private void handleUpdate(ArrayList<String> clientMsg) {
+        try {
+            updateStatement = connection.prepareStatement("update customer set address = ? where ssn = ?");
+
+            updateStatement.setString(1, clientMsg.get(1));
+            updateStatement.setString(2, clientMsg.get(0));
+
+            try {
+                if (updateStatement.executeUpdate() == 0) {
+                    message.add("No such customer with specified SSN. No customer updated.");
+                    out.writeObject(message);
+                    return;
+                }
+
+            } catch (SQLException e) {
+                message.add("Could not update customer.");
+                out.writeObject(message);
+                return;
+            }
+
+            message.add("Customer address successfully updated.");
+
+            out.writeObject(message);
+
+        } catch(SQLException | IOException e) {
+            System.out.println("Error at handleUpdate()" + e.getMessage());
+        }
     }
-    */
 }
