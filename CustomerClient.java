@@ -7,6 +7,8 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 
 import javax.swing.*;
+import javax.swing.table.DefaultTableCellRenderer;
+import javax.swing.table.DefaultTableModel;
 
 public class CustomerClient extends JFrame implements ActionListener {
     private JLabel nameLabel = new JLabel("Name:");
@@ -36,6 +38,7 @@ public class CustomerClient extends JFrame implements ActionListener {
 
     private JTextArea outputArea = new JTextArea();
     private JScrollPane scrollArea = new JScrollPane();
+    private JTable table = new JTable();
 
     private Socket socket;
     private ObjectInputStream in;
@@ -61,9 +64,9 @@ public class CustomerClient extends JFrame implements ActionListener {
 
     private void createAndShowGUI() {
         // Set up GUI
-        setSize(new Dimension(1200, 400));
+        setSize(new Dimension(1200, 500));
 
-        add(BorderLayout.CENTER, topPanel);
+        add(BorderLayout.PAGE_START, topPanel);
 
         subPanel1.setBackground(new Color(238, 238, 238));
         subPanel2.setBackground(new Color(238, 238, 238));
@@ -104,11 +107,14 @@ public class CustomerClient extends JFrame implements ActionListener {
 
         subPanel3.add(statusLabel);
         subPanel3.add(errors);
-
-        //add(BorderLayout.CENTER, topPanel);
+/*
         scrollArea = new JScrollPane(outputArea);
         scrollArea.setPreferredSize(new Dimension(this.getWidth(), this.getHeight() / 2));
         add(BorderLayout.PAGE_END, scrollArea);
+  */
+        scrollArea.setPreferredSize(new Dimension(this.getWidth(), this.getHeight() / 2));
+        scrollArea.getViewport().setBackground(Color.WHITE);
+        add(BorderLayout.CENTER, scrollArea);
 
         setVisible(true);
     }
@@ -153,6 +159,7 @@ public class CustomerClient extends JFrame implements ActionListener {
 
             // Update status label.
             statusLabel.setText("Connected");
+            statusLabel.setForeground(Color.BLACK);
 
             // Enable buttons
             getAllButton.setEnabled(true);
@@ -162,8 +169,12 @@ public class CustomerClient extends JFrame implements ActionListener {
 
         } catch (UnknownHostException e) {
             System.err.println("Exception resolving host name: " + e);
+            statusLabel.setText("Could not connect to server.");
+            statusLabel.setForeground(Color.RED);
         } catch (IOException e) {
             System.err.println("Exception establishing socket connection: " + e);
+            statusLabel.setText("Could not connect to server.");
+            statusLabel.setForeground(Color.RED);
         }
     }
 
@@ -198,10 +209,43 @@ public class CustomerClient extends JFrame implements ActionListener {
             String queryStatus = message.get(message.size() - 1);
 
             statusLabel.setText(queryStatus);
+            statusLabel.setForeground(Color.BLACK);
 
             message.remove(0);
             message.remove(message.size() - 1);
 
+            String[] columnNames = {"Name",
+                    "Social Security Number",
+                    "Address",
+                    "ZIP Code"};
+
+            //Object[][] customerTable = new Object[message.size()][4];
+            Object[][] customerTable = new Object[message.size() / 4][4];
+
+            int row = 0;
+            int col = 0;
+
+            for (String s : message) {
+                customerTable[row][col] = s;
+
+                col++;
+
+                if (col == 4) {
+                    col = 0;
+                    row++;
+                }
+            }
+
+            table = new JTable(new DefaultTableModel(customerTable, columnNames));
+            table.setRowSelectionAllowed(false);
+            table.setDefaultEditor(Object.class, null);
+            table.setDefaultRenderer(Object.class, new VisitorRenderer());
+            table.setFillsViewportHeight(true);
+
+            scrollArea = new JScrollPane(table);
+            scrollArea.setPreferredSize(new Dimension(this.getWidth(), this.getHeight() / 2));
+            add(BorderLayout.CENTER, scrollArea);
+/*
             int i = 0;
 
             for (String s : message)
@@ -213,6 +257,7 @@ public class CustomerClient extends JFrame implements ActionListener {
                     outputArea.append(s + "; \n");
                     i = 0;
                 }
+    */
         } catch(IOException | ClassNotFoundException e) {
             System.out.println("Couldn't read from server");
         }
@@ -444,8 +489,6 @@ public class CustomerClient extends JFrame implements ActionListener {
 
                 String warningString = warning.toString();
 
-                System.out.println(warning.length());
-
                 statusLabel.setText(warningString);
 
                 statusLabel.setForeground(Color.RED);
@@ -474,6 +517,15 @@ public class CustomerClient extends JFrame implements ActionListener {
             }
         } catch (IOException | ClassNotFoundException e) {
             System.out.println("IOException: " + e.getMessage());
+        }
+    }
+
+    public class VisitorRenderer extends DefaultTableCellRenderer {
+        @Override
+        public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+            super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+            setBorder(noFocusBorder);
+            return this;
         }
     }
 }

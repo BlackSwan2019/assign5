@@ -143,8 +143,6 @@ class Conversation extends Thread {
                 // Read and process input from the client. (HANDLE REQUESTS)
                 message = (ArrayList) in.readObject();
 
-                System.out.println(message.get(0));
-
                 switch (message.get(0)) {
                     case "GETALL":
                         handleGetAll();
@@ -177,6 +175,8 @@ class Conversation extends Thread {
 
     private void handleGetAll() {
         try {
+            int rowsReturned = 0;
+
             getAllStatement = connection.createStatement();
 
             resultSet = getAllStatement.executeQuery("SELECT * FROM customer");
@@ -186,9 +186,10 @@ class Conversation extends Thread {
                 message.add(resultSet.getString("ssn"));
                 message.add(resultSet.getString("address"));
                 message.add(resultSet.getString("zipCode"));
+                rowsReturned++;
             }
 
-            message.add("Query successful\n");
+            message.add(rowsReturned + " records found.");
 
             out.writeObject(message);
         } catch(Exception e) {
