@@ -3,7 +3,6 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.*;
 import java.net.Socket;
-import java.net.UnknownHostException;
 import java.util.ArrayList;
 
 import javax.swing.*;
@@ -11,13 +10,16 @@ import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 
 public class CustomerClient extends JFrame implements ActionListener {
+    // Labels for the text fields.
     private JLabel nameLabel = new JLabel("Name:");
     private JLabel AddressLabel = new JLabel("Address:");
     private JLabel ssnLabel = new JLabel("SSN:");
     private JLabel zipLabel = new JLabel("Zip Code:");
-    private JLabel statusLabel = new JLabel("Client started");
-    private JLabel errors = new JLabel();
 
+    // This label shows status of client/database-actions.
+    private JLabel statusLabel = new JLabel("Client started");
+
+    // Text fields for entering data.
     private JTextField nameField = new JTextField();
     private JTextField addressField = new JTextField();
     private JTextField ssnField = new JTextField();
@@ -36,19 +38,18 @@ public class CustomerClient extends JFrame implements ActionListener {
     private JPanel subPanel2 = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 5));
     private JPanel subPanel3 = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
 
-    private JTextArea outputArea = new JTextArea();
     private JScrollPane scrollArea = new JScrollPane();
-    private JTable table = new JTable();
+    private JTable table = new JTable();                    // Customer table that will be populated by Get All task.
 
-    private Socket socket;
-    private ObjectInputStream in;
-    private ObjectOutputStream out;
+    private Socket socket;                                  // Socket to communicate with server.
+    private ObjectInputStream in;                           // For incoming data from server.
+    private ObjectOutputStream out;                         // For outgoing data to server.
 
-    private ArrayList<String> message = new ArrayList<>();
+    private ArrayList<String> message = new ArrayList<>();  // Server requests and database results.
 
-    private ArrayList<String> warnings = new ArrayList<>();
+    private ArrayList<String> warnings = new ArrayList<>(); // Errors/warnings
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 1L;        // ID for object serialization.
 
     public static void main(String[] args) {
 
@@ -68,17 +69,21 @@ public class CustomerClient extends JFrame implements ActionListener {
 
         add(BorderLayout.PAGE_START, topPanel);
 
+        // Set background color for the top 3 sub-panels.
         subPanel1.setBackground(new Color(238, 238, 238));
         subPanel2.setBackground(new Color(238, 238, 238));
         subPanel3.setBackground(new Color(238, 238, 238));
 
+        // Add sub-panels.
         topPanel.add(BorderLayout.PAGE_START, subPanel1);
         topPanel.add(BorderLayout.CENTER, subPanel2);
         topPanel.add(BorderLayout.PAGE_END, subPanel3);
 
+        // Add margins to the top two sub-panels.
         subPanel1.setBorder(BorderFactory.createEmptyBorder(10,  8,  5,  5));
         subPanel2.setBorder(BorderFactory.createEmptyBorder(10,  8,  5,  5));
 
+        // Add labels and text fields to the interface.
         subPanel1.add(nameLabel);
         subPanel1.add(nameField);
         subPanel1.add(ssnLabel);
@@ -88,33 +93,41 @@ public class CustomerClient extends JFrame implements ActionListener {
         subPanel1.add(zipLabel);
         subPanel1.add(zipField);
 
+        // Add buttons to the interface.
         subPanel2.add(connectButton);
         subPanel2.add(getAllButton);
         subPanel2.add(addButton);
         subPanel2.add(deleteButton);
         subPanel2.add(updateButton);
 
+        // Task buttons will initially be disabled (until successful connection to server/database).
         getAllButton.setEnabled(false);
         addButton.setEnabled(false);
         deleteButton.setEnabled(false);
         updateButton.setEnabled(false);
 
+        // Add action listeners to buttons.
         connectButton.addActionListener(this);
         getAllButton.addActionListener(this);
         addButton.addActionListener(this);
         updateButton.addActionListener(this);
         deleteButton.addActionListener(this);
 
+        // Add status label to the interface.
         subPanel3.add(statusLabel);
-        subPanel3.add(errors);
-/*
-        scrollArea = new JScrollPane(outputArea);
+
+        // Set scroll area properties.
         scrollArea.setPreferredSize(new Dimension(this.getWidth(), this.getHeight() / 2));
-        add(BorderLayout.PAGE_END, scrollArea);
-  */
-        scrollArea.setPreferredSize(new Dimension(this.getWidth(), this.getHeight() / 2));
-        scrollArea.getViewport().setBackground(Color.WHITE);
-        add(BorderLayout.CENTER, scrollArea);             // DISABLE TO ALLOW SCROLLING.
+        scrollArea.getViewport().setBackground(Color.BLACK);
+
+        // This is used just to get column names displayed before any Get All request.
+        String[] columnNames = {"Name", "Social Security Number", "Address", "ZIP Code"};
+        Object[][] customerTable = new Object[0][0];
+        table = new JTable(new DefaultTableModel(customerTable, columnNames));
+        table.setFillsViewportHeight(true);
+        scrollArea.setViewportView(table);
+
+        add(BorderLayout.CENTER, scrollArea);
 
         setVisible(true);
     }
@@ -123,19 +136,14 @@ public class CustomerClient extends JFrame implements ActionListener {
     public void actionPerformed(ActionEvent e) {
         if (e.getActionCommand().equals("Connect")) {
             connect();
-
         } else if (e.getActionCommand().equals("Disconnect")) {
             disconnect();
-
         } else if (e.getSource() == getAllButton) {
             handleGetAll();
-
         } else if (e.getSource() == addButton) {
             handleAdd();
-
         } else if (e.getSource() == updateButton) {
             handleUpdate();
-
         } else if (e.getSource() == deleteButton) {
             handleDelete();
         }
@@ -143,8 +151,10 @@ public class CustomerClient extends JFrame implements ActionListener {
 
     private void connect() {
         try {
+            String handshake;           // Checks to see if client can talk to server and database.
             // Replace 97xx with your port number
             //socket = new Socket("turing.cs.niu.edu", 9732);
+            // Set socket on local machine to port 9732.
             socket = new Socket("localhost", 9732);
 
             System.out.println("LOG: Socket opened");
@@ -155,30 +165,38 @@ public class CustomerClient extends JFrame implements ActionListener {
 
             System.out.println("LOG: Streams opened");
 
-            connectButton.setText("Disconnect");
+            // Write to server and see if there is a responding handshake.
+            out.writeObject("HANDSHAKE");
+            handshake = (String) in.readObject();
 
-            // Update status label.
-            statusLabel.setText("Connected");
-            statusLabel.setForeground(Color.BLACK);
+            // If server responds with "HANDSHAKE", it means that the client is connected to the server and the server
+            // was able to connect to the database.
+            if (handshake.equalsIgnoreCase("HANDSHAKE")) {
+                // Update status label.
+                statusLabel.setText("Connected");
+                statusLabel.setForeground(Color.BLACK);
 
-            // Enable buttons
-            getAllButton.setEnabled(true);
-            addButton.setEnabled(true);
-            deleteButton.setEnabled(true);
-            updateButton.setEnabled(true);
+                // Since client is connected, switch "Connect" button to "Disconnect".
+                connectButton.setText("Disconnect");
 
-        } catch (UnknownHostException e) {
+                // Enable buttons
+                getAllButton.setEnabled(true);
+                addButton.setEnabled(true);
+                deleteButton.setEnabled(true);
+                updateButton.setEnabled(true);
+            } else {    // Else, client handshake with server failed. Display warning.
+                statusLabel.setText(handshake);
+                statusLabel.setForeground(Color.RED);
+            }
+        } catch (IOException | ClassNotFoundException e) {
             System.err.println("Exception resolving host name: " + e);
-            statusLabel.setText("Could not connect to server.");
-            statusLabel.setForeground(Color.RED);
-        } catch (IOException e) {
-            System.err.println("Exception establishing socket connection: " + e);
             statusLabel.setText("Could not connect to server.");
             statusLabel.setForeground(Color.RED);
         }
     }
 
     private void disconnect() {
+        // Since client is disconnected, switch button label to "Connect".
         connectButton.setText("Connect");
 
         // Disable buttons
@@ -187,6 +205,7 @@ public class CustomerClient extends JFrame implements ActionListener {
         deleteButton.setEnabled(false);
         updateButton.setEnabled(false);
 
+        // Set status.
         statusLabel.setText("Disconnected");
         statusLabel.setForeground(Color.BLACK);
 
@@ -199,33 +218,38 @@ public class CustomerClient extends JFrame implements ActionListener {
 
     private void handleGetAll() {
         try {
+            // Re-instantiate the client-server message object.
             message = new ArrayList<>();
 
+            // Set request type to "GETALL" and add to message. Send request to server.
             message.add("GETALL");
-
             out.writeObject(message);
 
+            // Read in the returned results for "GETALL" and store in message.
             message = (ArrayList) in.readObject();
 
+            // Get status of query (a string) and store it. Set status label to that string.
             String queryStatus = message.get(message.size() - 1);
-
             statusLabel.setText(queryStatus);
             statusLabel.setForeground(Color.BLACK);
 
+            // Scrub the request-type and query status from the message object.
             message.remove(0);
             message.remove(message.size() - 1);
 
+            // Set table column names.
             String[] columnNames = {"Name",
                     "Social Security Number",
                     "Address",
                     "ZIP Code"};
 
-            //Object[][] customerTable = new Object[message.size()][4];
+            // Set the number of rows and columns in the table.
             Object[][] customerTable = new Object[message.size() / 4][4];
 
-            int row = 0;
-            int col = 0;
+            int row = 0;    // row counter
+            int col = 0;    // column counter
 
+            // Loop through the message, adding its strings to the table.
             for (String s : message) {
                 customerTable[row][col] = s;
 
@@ -237,6 +261,7 @@ public class CustomerClient extends JFrame implements ActionListener {
                 }
             }
 
+            // Re-instantiate table and set its properties.
             table = new JTable(new DefaultTableModel(customerTable, columnNames));
             table.setRowSelectionAllowed(false);
             table.setDefaultEditor(Object.class, null);
@@ -256,24 +281,23 @@ public class CustomerClient extends JFrame implements ActionListener {
 
     private void handleAdd() {
         try {
-            String addSSN;
-            String addName;
-            String addAddress;
-            String addZip;
-
             // Re-instantiate client-server message.
             message = new ArrayList<>();
 
             // Add request type to beginning of message.
             message.add("ADD");
 
+            // Reset warnings list.
             warnings = new ArrayList<>();
 
+            // Set invalid-field flag to false.
             boolean warningFlag = false;
 
+            // Created regex pattern for name field.
             java.util.regex.Pattern namePattern = java.util.regex.Pattern.compile("^(?!\\s)[a-zA-Z\\s]{1,20}$");
             java.util.regex.Matcher nameMatcher = namePattern.matcher(nameField.getText());
 
+            // Compare name field's data to empty or regex pattern. If invalid data, set warning flag to true.
             if (nameField.getText().equalsIgnoreCase("")) {
                 warnings.add("No name entered.");
                 warningFlag = true;
@@ -282,10 +306,11 @@ public class CustomerClient extends JFrame implements ActionListener {
                 warnings.add("Improper name entered.");
                 warningFlag = true;
             }
-
+            // Created regex pattern for SSN field.
             java.util.regex.Pattern ssnPattern = java.util.regex.Pattern.compile("^(?!000|666|\\s)[0-8][0-9]{2}-(?!00)[0-9]{2}-(?!0000)[0-9]{4}$");
             java.util.regex.Matcher ssnMatcher = ssnPattern.matcher(ssnField.getText());
 
+            // Compare SSN field's data to empty or regex pattern. If invalid data, set warning flag to true.
             if (ssnField.getText().equalsIgnoreCase("")) {
                 warnings.add("No SSN entered.");
                 warningFlag = true;
@@ -295,9 +320,11 @@ public class CustomerClient extends JFrame implements ActionListener {
                 warningFlag = true;
             }
 
+            // Created regex pattern for address field.
             java.util.regex.Pattern addressPattern = java.util.regex.Pattern.compile("^(?!\\s)[\\w\\s. ]{1,40}$");
             java.util.regex.Matcher addressMatcher = addressPattern.matcher(addressField.getText());
 
+            // Compare address field's data to empty or regex pattern. If invalid data, set warning flag to true.
             if (addressField.getText().equalsIgnoreCase("")) {
                 warnings.add("No address entered.");
                 warningFlag = true;
@@ -307,9 +334,11 @@ public class CustomerClient extends JFrame implements ActionListener {
                 warningFlag = true;
             }
 
+            // Created regex pattern for ZIP Code field.
             java.util.regex.Pattern zipPattern = java.util.regex.Pattern.compile("^(?!\\s)[0-9]{5}$");
             java.util.regex.Matcher zipMatcher = zipPattern.matcher(zipField.getText());
 
+            // Compare ZIP Code field's data to empty or regex pattern. If invalid data, set warning flag to true.
             if (zipField.getText().equalsIgnoreCase("")) {
                 warnings.add("No zip code entered.");
                 warningFlag = true;
@@ -319,7 +348,7 @@ public class CustomerClient extends JFrame implements ActionListener {
                 warningFlag = true;
             }
 
-            // If there are any incorrectly-filled fields, give warnings and do NOT add customer to database.
+            // If there are any incorrectly-filled fields (warningFlag is true), give warnings and do NOT add customer to database.
             if (warningFlag) {
                 StringBuilder warning = new StringBuilder();
 
@@ -335,23 +364,16 @@ public class CustomerClient extends JFrame implements ActionListener {
                 statusLabel.setForeground(Color.RED);
 
                 this.setVisible(true);
-            }
-            // Else, add all the field values to the message and send it to server for processing.
-            else {
-                addName  = nameField.getText();
-                addSSN = ssnField.getText();
-                addAddress = addressField.getText();
-                addZip = zipField.getText();
-
-                message.add(addName);
-                message.add(addSSN);
-                message.add(addAddress);
-                message.add(addZip);
+            } else {  // Else, add all the field values to the message and send it to server for processing.
+                message.add(nameField.getText());
+                message.add(ssnField.getText());
+                message.add(addressField.getText());
+                message.add(zipField.getText());
 
                 out.writeObject(message);
 
+                // Read in last section of returned message to obtain result status.
                 message = (ArrayList) in.readObject();
-
                 String queryStatus = message.get(message.size() - 1);
 
                 // If SSN already is in the database, MySQL will naturally reject it. Give warning.
@@ -378,13 +400,17 @@ public class CustomerClient extends JFrame implements ActionListener {
             // Add request type to beginning of message.
             message.add("DELETE");
 
+            // Reset warnings list.
             warnings = new ArrayList<>();
 
+            // Set invalid-field warning flag to false.
             boolean warningFlag = false;
 
+            // Created regex pattern for SSN Code field.
             java.util.regex.Pattern ssnPattern = java.util.regex.Pattern.compile("^(?!000|666|\\s)[0-8][0-9]{2}-(?!00)[0-9]{2}-(?!0000)[0-9]{4}$");
             java.util.regex.Matcher ssnMatcher = ssnPattern.matcher(ssnField.getText());
 
+            // Compare SSN field's data to empty or regex pattern. If invalid data, set warning flag to true.
             if (ssnField.getText().equalsIgnoreCase("")) {
                 warnings.add("No SSN entered.");
                 warningFlag = true;
@@ -394,6 +420,7 @@ public class CustomerClient extends JFrame implements ActionListener {
                 warningFlag = true;
             }
 
+            // If there are any incorrectly-filled fields (warningFlag is true), give warnings and do NOT delete customer from database.
             if (warningFlag) {
                 StringBuilder warning = new StringBuilder();
 
@@ -409,7 +436,7 @@ public class CustomerClient extends JFrame implements ActionListener {
                 statusLabel.setForeground(Color.RED);
 
                 this.setVisible(true);
-            } else {
+            } else {    // Else, delete the customer from the table.
                 message.add(ssnField.getText());
 
                 out.writeObject(message);
@@ -496,7 +523,7 @@ public class CustomerClient extends JFrame implements ActionListener {
                 String queryStatus = message.get(message.size() - 1);
 
                 // If SSN already is in the database, MySQL will naturally reject it. Give warning.
-                if ((message.get(message.size() - 1).equalsIgnoreCase("No such customer with specified SSN. No customer updated."))) {
+                if ((message.get(message.size() - 1).equalsIgnoreCase("No customer with specified SSN. No customer updated."))) {
                     statusLabel.setText(queryStatus);
                     statusLabel.setForeground(Color.RED);
                 }

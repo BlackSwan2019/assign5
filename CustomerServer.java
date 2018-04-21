@@ -8,7 +8,6 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
-import java.util.Date;
 
 public class CustomerServer extends Thread {
     private ServerSocket listenSocket;
@@ -82,7 +81,7 @@ class Conversation extends Thread {
 
     private ResultSet resultSet = null;
 
-    private Connection connection;
+    private Connection connection = null;
 
     private ArrayList<String> message = new ArrayList<>();
 
@@ -111,14 +110,23 @@ class Conversation extends Thread {
         }
 
         try {
-            System.out.println("LOG: Trying to create database connection");
-            connection = DriverManager.getConnection(URL, name, password);
+            String handshake = (String) in.readObject();
 
-            // Create your Statements and PreparedStatements here
+            if (handshake.equalsIgnoreCase("HANDSHAKE")) {
+                System.out.println("LOG: Trying to create database connection");
+                connection = DriverManager.getConnection(URL, name, password);
 
-            System.out.println("LOG: Connected to database");
+                out.writeObject("HANDSHAKE");
 
-        } catch (SQLException e) {
+                System.out.println("LOG: Connected to database");
+            }
+
+        } catch (SQLException | IOException | ClassNotFoundException e) {
+            try {
+                out.writeObject("Could not connect to database.");
+            } catch (IOException ex) {
+                System.out.println("Could not connect to database.");
+            }
             System.err.println("Exception connecting to database manager: " + e);
             return;
         }
@@ -260,7 +268,7 @@ class Conversation extends Thread {
 
             try {
                 if (updateStatement.executeUpdate() == 0) {
-                    message.add("No such customer with specified SSN. No customer updated.");
+                    message.add("No customer with specified SSN. No customer updated.");
                     out.writeObject(message);
                     return;
                 }
