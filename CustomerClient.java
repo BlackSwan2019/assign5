@@ -1,3 +1,18 @@
+/*
+ CSCI           470 section 1
+ TA:            Priyanka Kondapuram
+ Partner 1      Ben Lane
+ zID:		    z1806979
+ Partner 2:     Jinhong Yao
+ zID:		    z178500
+ Assignment:    5
+ Date Due:	    TBD
+
+ Purpose:       To create and run a client and server. The client can request certain tasks of a server
+                that then accesses a database. The client interacts with the server to query, add, delete,
+                and update customers in a customer database table.
+ */
+
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -9,6 +24,9 @@ import javax.swing.*;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 
+/**
+ * This class is used to create a client interface and handle forms and server requests.
+ */
 public class CustomerClient extends JFrame implements ActionListener {
     // Labels for the text fields.
     private JLabel nameLabel = new JLabel("Name:");
@@ -38,7 +56,7 @@ public class CustomerClient extends JFrame implements ActionListener {
     private JPanel subPanel2 = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 5));
     private JPanel subPanel3 = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
 
-    private JScrollPane scrollArea = new JScrollPane();
+    private JScrollPane scrollArea = new JScrollPane();     // Scroll area that contains the table.
     private JTable table = new JTable();                    // Customer table that will be populated by Get All task.
 
     private Socket socket;                                  // Socket to communicate with server.
@@ -59,10 +77,16 @@ public class CustomerClient extends JFrame implements ActionListener {
         });
     }
 
+    /**
+     * Constructor for CustomerClient class.
+     */
     private CustomerClient() {
         super("Customer Database");
     }
 
+    /**
+     * Creates and displays the client app's user interface.
+     */
     private void createAndShowGUI() {
         // Set up GUI
         setSize(new Dimension(1200, 500));
@@ -132,6 +156,11 @@ public class CustomerClient extends JFrame implements ActionListener {
         setVisible(true);
     }
 
+    /**
+     * Event listener for the client task buttons.
+     *
+     * @param e     Action event from a button.
+     */
     @Override
     public void actionPerformed(ActionEvent e) {
         if (e.getActionCommand().equals("Connect")) {
@@ -149,6 +178,9 @@ public class CustomerClient extends JFrame implements ActionListener {
         }
     }
 
+    /**
+     * Establishes connection with a server as well as making sure the server has access to the database.
+     */
     private void connect() {
         try {
             String handshake;           // Checks to see if client can talk to server and database.
@@ -195,6 +227,9 @@ public class CustomerClient extends JFrame implements ActionListener {
         }
     }
 
+    /**
+     *  Disconnects client from the server.
+     */
     private void disconnect() {
         // Since client is disconnected, switch button label to "Connect".
         connectButton.setText("Connect");
@@ -216,9 +251,12 @@ public class CustomerClient extends JFrame implements ActionListener {
         }
     }
 
+    /**
+     * Handles the Get All customers task.
+     */
     private void handleGetAll() {
         try {
-            // Re-instantiate the client-server message object.
+            // Reset the client-server message object.
             message = new ArrayList<>();
 
             // Set request type to "GETALL" and add to message. Send request to server.
@@ -238,10 +276,10 @@ public class CustomerClient extends JFrame implements ActionListener {
             message.remove(message.size() - 1);
 
             // Set table column names.
-            String[] columnNames = {"Name",
-                    "Social Security Number",
-                    "Address",
-                    "ZIP Code"};
+            String[] columnNames = {table.getColumnName(0),
+                                    table.getColumnName(1),
+                                    table.getColumnName(2),
+                                    table.getColumnName(3)};
 
             // Set the number of rows and columns in the table.
             Object[][] customerTable = new Object[message.size() / 4][4];
@@ -261,7 +299,7 @@ public class CustomerClient extends JFrame implements ActionListener {
                 }
             }
 
-            // Re-instantiate table and set its properties.
+            // Reset table and set its properties.
             table = new JTable(new DefaultTableModel(customerTable, columnNames));
             table.setRowSelectionAllowed(false);
             table.setDefaultEditor(Object.class, null);
@@ -279,9 +317,12 @@ public class CustomerClient extends JFrame implements ActionListener {
         }
     }
 
+    /**
+     * Handles the Add customer task.
+     */
     private void handleAdd() {
         try {
-            // Re-instantiate client-server message.
+            // Reset client-server message.
             message = new ArrayList<>();
 
             // Add request type to beginning of message.
@@ -352,15 +393,17 @@ public class CustomerClient extends JFrame implements ActionListener {
             if (warningFlag) {
                 StringBuilder warning = new StringBuilder();
 
+                // Loop through array list of built-up warnings and add them to StringBuilder.
                 for (String s : warnings) {
                     warning.append(s);
                     warning.append(" ");
                 }
 
+                // Convert StringBuilder warning to String.
                 String warningString = warning.toString();
 
+                // Set status label to display warnings.
                 statusLabel.setText(warningString);
-
                 statusLabel.setForeground(Color.RED);
 
                 this.setVisible(true);
@@ -392,9 +435,12 @@ public class CustomerClient extends JFrame implements ActionListener {
         }
     }
 
+    /**
+     * Handles the Delete customer task.
+     */
     private void handleDelete() {
         try {
-            // Re-instantiate client-server message.
+            // Reset client-server message.
             message = new ArrayList<>();
 
             // Add request type to beginning of message.
@@ -406,7 +452,7 @@ public class CustomerClient extends JFrame implements ActionListener {
             // Set invalid-field warning flag to false.
             boolean warningFlag = false;
 
-            // Created regex pattern for SSN Code field.
+            // Created regex pattern for SSN field.
             java.util.regex.Pattern ssnPattern = java.util.regex.Pattern.compile("^(?!000|666|\\s)[0-8][0-9]{2}-(?!00)[0-9]{2}-(?!0000)[0-9]{4}$");
             java.util.regex.Matcher ssnMatcher = ssnPattern.matcher(ssnField.getText());
 
@@ -424,15 +470,17 @@ public class CustomerClient extends JFrame implements ActionListener {
             if (warningFlag) {
                 StringBuilder warning = new StringBuilder();
 
+                // Loop through array list of built-up warnings and add them to StringBuilder.
                 for (String s : warnings) {
                     warning.append(s);
                     warning.append(" ");
                 }
 
+                // Convert StringBuilder warning to String.
                 String warningString = warning.toString();
 
+                // Set status label to display warnings.
                 statusLabel.setText(warningString);
-
                 statusLabel.setForeground(Color.RED);
 
                 this.setVisible(true);
@@ -449,9 +497,7 @@ public class CustomerClient extends JFrame implements ActionListener {
                 if ((message.get(message.size() - 1).equalsIgnoreCase("No customer with specified SSN. No customer deleted."))) {
                     statusLabel.setText(queryStatus);
                     statusLabel.setForeground(Color.RED);
-                }
-                // Else, SSN is new, so insert the new customer.
-                else {
+                } else {    // Else, SSN is new, so insert the new customer.
                     statusLabel.setText(queryStatus);
                     statusLabel.setForeground(Color.BLACK);
                 }
@@ -461,9 +507,12 @@ public class CustomerClient extends JFrame implements ActionListener {
         }
     }
 
+    /**
+     * Handles the Update customer task.
+     */
     private void handleUpdate() {
         try {
-            // Re-instantiate client-server message.
+            // Reset client-server message.
             message = new ArrayList<>();
 
             // Add request type to beginning of message.
@@ -473,9 +522,11 @@ public class CustomerClient extends JFrame implements ActionListener {
 
             boolean warningFlag = false;
 
+            // Created regex pattern for SSN field.
             java.util.regex.Pattern ssnPattern = java.util.regex.Pattern.compile("^(?!000|666|\\s)[0-8][0-9]{2}-(?!00)[0-9]{2}-(?!0000)[0-9]{4}$");
             java.util.regex.Matcher ssnMatcher = ssnPattern.matcher(ssnField.getText());
 
+            // Compare SSN field's data to empty or regex pattern. If invalid data, set warning flag to true.
             if (ssnField.getText().equalsIgnoreCase("")) {
                 warnings.add("No SSN entered.");
                 warningFlag = true;
@@ -485,9 +536,11 @@ public class CustomerClient extends JFrame implements ActionListener {
                 warningFlag = true;
             }
 
+            // Created regex pattern for address field.
             java.util.regex.Pattern addressPattern = java.util.regex.Pattern.compile("^(?!\\s)[\\w\\s. ]{1,40}$");
             java.util.regex.Matcher addressMatcher = addressPattern.matcher(addressField.getText());
 
+            // Compare address field's data to empty or regex pattern. If invalid data, set warning flag to true.
             if (addressField.getText().equalsIgnoreCase("")) {
                 warnings.add("No address entered.");
                 warningFlag = true;
@@ -497,18 +550,21 @@ public class CustomerClient extends JFrame implements ActionListener {
                 warningFlag = true;
             }
 
+            // If there are any incorrectly-filled fields (warningFlag is true), give warnings and do NOT delete customer from database.
             if (warningFlag) {
                 StringBuilder warning = new StringBuilder();
 
+                // Loop through array list of built-up warnings and add them to StringBuilder.
                 for (String s : warnings) {
                     warning.append(s);
                     warning.append(" ");
                 }
 
+                // Convert StringBuilder warning to String.
                 String warningString = warning.toString();
 
+                // Set status label to display warnings.
                 statusLabel.setText(warningString);
-
                 statusLabel.setForeground(Color.RED);
 
                 this.setVisible(true);
@@ -538,6 +594,9 @@ public class CustomerClient extends JFrame implements ActionListener {
         }
     }
 
+    /**
+     * This inner-class is used to override the table's cell renderer so that cells have no border when selected.
+     */
     public class VisitorRenderer extends DefaultTableCellRenderer {
         @Override
         public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
