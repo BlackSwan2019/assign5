@@ -114,7 +114,7 @@ public class CustomerClient extends JFrame implements ActionListener {
   */
         scrollArea.setPreferredSize(new Dimension(this.getWidth(), this.getHeight() / 2));
         scrollArea.getViewport().setBackground(Color.WHITE);
-        add(BorderLayout.CENTER, scrollArea);
+        add(BorderLayout.CENTER, scrollArea);             // DISABLE TO ALLOW SCROLLING.
 
         setVisible(true);
     }
@@ -188,6 +188,7 @@ public class CustomerClient extends JFrame implements ActionListener {
         updateButton.setEnabled(false);
 
         statusLabel.setText("Disconnected");
+        statusLabel.setForeground(Color.BLACK);
 
         try {
             socket.close();
@@ -242,22 +243,12 @@ public class CustomerClient extends JFrame implements ActionListener {
             table.setDefaultRenderer(Object.class, new VisitorRenderer());
             table.setFillsViewportHeight(true);
 
+            // Remove scrollArea and update it.
+            this.remove(scrollArea);
             scrollArea = new JScrollPane(table);
             scrollArea.setPreferredSize(new Dimension(this.getWidth(), this.getHeight() / 2));
             add(BorderLayout.CENTER, scrollArea);
-/*
-            int i = 0;
 
-            for (String s : message)
-                if (i < 3) {
-                    outputArea.append(s + "; ");
-                    i++;
-                }
-                else {
-                    outputArea.append(s + "; \n");
-                    i = 0;
-                }
-    */
         } catch(IOException | ClassNotFoundException e) {
             System.out.println("Couldn't read from server");
         }
