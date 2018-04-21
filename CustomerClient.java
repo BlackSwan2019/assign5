@@ -9,8 +9,7 @@
  Date Due:	    TBD
 
  Purpose:       To create and run a client and server. The client can request certain tasks of a server
-                that then accesses a database. The client interacts with the server to query, add, delete,
-                and update customers in a customer database table.
+                that then accesses a database. The server queries, adds, deletes, and updates the database.
  */
 
 import java.awt.*;
